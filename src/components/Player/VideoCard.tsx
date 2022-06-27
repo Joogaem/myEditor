@@ -1,4 +1,5 @@
-import { Dispatch, SetStateAction } from "react";
+import { useState,  MutableRefObject, useRef, useEffect, createRef, useCallback, useMemo, memo } from "react";
+import { useSelector, useDispatch } from 'react-redux';
 import Slider from "../Slider";
 import "./VideoCard.scss";
 import {
@@ -13,55 +14,29 @@ import {
     PlayIcon1,
 } from "../Assets/SVGs";
 // import Dropdown from "../../Dropdown";
-import { MutableRefObject, useRef, useState } from "react";
 // import { secondsToTime } from "../../../../helpers/functions";
+import { 
+    setStatusVideoPlayState
+  } from '../../modules/status';
 
-declare global {
-    interface Element {
-        requestFullScreen?(): void;
-        msRequestFullscreen(): void;
-        webkitRequestFullscreen(): void;
-        mozRequestFullScreen(): void;
-    }
-}
-interface VideoCardProps {
-    currentVideo: string;
-    setCurrentVideo: Dispatch<SetStateAction<string>>;
-    currentTime: number;
-    setCurrentTime: Dispatch<SetStateAction<number>>;
-    duration: number;
-    setDuration: Dispatch<SetStateAction<number>>;
-}
 
-const VideoCard = ({
-    currentVideo,
-    setCurrentVideo,
-    currentTime,
-    setCurrentTime,
-    duration,
-    setDuration,
-}: VideoCardProps): JSX.Element => {
+function VideoCard()  {
     const videoRef = useRef() as MutableRefObject<HTMLVideoElement>;
+    const [currentVideo, setCurrentVideo] = useState('');
     const [paused, setPaused] = useState(true);
+    const [currentTime, setCurrentTime] = useState(0);
+    const [duration, setDuration] = useState(0);
 
-    // const convertToGif = () => {
-    //     fetch("http://localhost:3211/upload", {
-    //         method: "post",
-    //         headers: {
-    //             "Content-Type": "application/json",
-    //         },
-    //         body: JSON.stringify({
-    //             filename: "currentVid.mp4",
-    //             filepath:
-    //                 currentVideo ||
-    //                 "/test_video.mp4",
-    //         }),
-    //     });
-    //     console.log(
-    //         currentVideo ||
-    //             "/test_video.mp4"
-    //     );
-    // };
+    const dispatch = useDispatch();
+
+
+    useEffect(() => {
+        //console.log(currentTime);
+    },[currentTime]);
+
+    useEffect(() => {
+        //console.log(duration);
+    },[duration]);
 
     return (
         <div className="VideoCard">
@@ -73,9 +48,11 @@ const VideoCard = ({
                     id="my-video"
                     onPause={() => {
                         setPaused(true);
+                        dispatch(setStatusVideoPlayState(false));
                     }}
                     onPlay={() => {
                         setPaused(false);
+                        dispatch(setStatusVideoPlayState(true));
                     }}
                     onLoadedMetadata={() => {
                         setDuration(videoRef.current.duration);
@@ -109,17 +86,14 @@ const VideoCard = ({
                         <div>
                             <span
                                 onClick={() => {
-                                    videoRef.current.currentTime -= 5;
+                                    paused
+                                        ? videoRef.current.play()
+                                        : videoRef.current.pause();
+                                    setPaused(!paused);
+                                    console.log(videoRef.current);
                                 }}
                             >
-                                <SkipBD />
-                            </span>
-                            <span
-                                onClick={() => {
-                                    videoRef.current.currentTime += 5;
-                                }}
-                            >
-                                <SkipFD />
+                                {paused ? <PlayIcon1 /> : <PauseIcon />}
                             </span>
                             <span
                                 onClick={() => {
@@ -132,14 +106,17 @@ const VideoCard = ({
                             </span>
                             <span
                                 onClick={() => {
-                                    paused
-                                        ? videoRef.current.play()
-                                        : videoRef.current.pause();
-                                    setPaused(!paused);
-                                    console.log(videoRef.current);
+                                    videoRef.current.currentTime -= 5;
                                 }}
                             >
-                                {paused ? <PlayIcon1 /> : <PauseIcon />}
+                                <SkipBD />
+                            </span>
+                            <span
+                                onClick={() => {
+                                    videoRef.current.currentTime += 5;
+                                }}
+                            >
+                                <SkipFD />
                             </span>
                         </div>
                         <div>
@@ -148,7 +125,7 @@ const VideoCard = ({
                     </div>
                     <div className="VideoCard__controls__other">
                         <CameraIcon size={18} />
-                        <span
+                        {/* <span
                             onClick={() => {
                                 if (videoRef.current.requestFullscreen) {
                                     videoRef.current.requestFullscreen();
@@ -168,7 +145,7 @@ const VideoCard = ({
                             }}
                         >
                             <ExpandIcon size={18} />
-                        </span>
+                        </span> */}
                     </div>
                 </div>
             </div>

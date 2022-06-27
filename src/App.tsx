@@ -1,4 +1,5 @@
 import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
+import "@babel/polyfill";
 import {
   Container,
   Table,
@@ -8,7 +9,8 @@ import Point from './components/Waveform/Point';
 import Segment from './components/Waveform/Segment';
 import WaveformView from './components/Waveform/WaveformView';
 import Player from './components/Player/Player.js';
-import VideoCard from './components/Player/VideoCard'
+import VideoCard from './components/Player/VideoCard';
+import Trimmer from './components/Trimmer/Trimmer'
 import './App.css';
 
 
@@ -51,15 +53,16 @@ function App() {
 
     return (
         <Container>
-          <VideoCard  
+          {/* <VideoCard  
             currentVideo={currentVideo}
             setCurrentVideo={setCurrentVideo}
             currentTime={currentTime}
             setCurrentTime={setCurrentTime}
             duration={duration}
             setDuration={setDuration}
-          />
-
+          /> */}
+          <Trimmer />
+          <VideoCard />
           <WaveformView
             audioUrl={url.audioUrl}
             audioContentType={url.audioContentType}

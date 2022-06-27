@@ -1,81 +1,83 @@
-import React, { Component } from 'react';
-import PropTypes from 'prop-types';
+import React, { useEffect, useRef, useState } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import { Button, ButtonToolbar } from 'react-bootstrap';
 import Peaks from 'peaks.js';
 
 import { createPointMarker, createSegmentMarker } from './MarkerFactories';
 import { createSegmentLabel } from './SegmentLabelFactory';
-import WaveformData from 'waveform-data';
 
 import './WaveformView.css';
 
-class WaveformView extends Component {
-  constructor(props) {
-    super(props);
+function WaveformView (props) {
+  const zoomviewWaveformRef = useRef();
+  const overviewWaveformRef = useRef();
+  const audioRef = useRef();
+  const [peaks,setPeaks] = useState('');
 
-    this.zoomviewWaveformRef = React.createRef();
-    this.overviewWaveformRef = React.createRef();
-    this.audioElementRef = React.createRef();
-    this.peaks = null;
-  }
+  const videoPlayState = useSelector(state => state.status.videoPlayState);
 
-  render() {
-    console.log("WaveformView.render, audioUrl:", this.props.audioUrl, 'waveformDataUrl:', this.props.waveformDataUrl);
-    const audioContext = new AudioContext();
+  var prevProps = {
+    audioUrl: ''
+  };
 
-    return (
-      <div>
-        <div className="zoomview-container" ref={this.zoomviewWaveformRef}></div>
-        <div className="overview-container" ref={this.overviewWaveformRef}></div>
+  useEffect(() =>{ 
+    if(videoPlayState) {
+      if (peaks) {
+        audioRef.current.play();
+      }
+    } else {
+      if (peaks) {
+        audioRef.current.pause();
+      }
+    }
+  },[videoPlayState])
 
-        <audio ref={this.audioElementRef} controls="controls">
-          <source src={this.props.audioUrl} type={this.props.audioContentType}/>
-          Your browser does not support the audio element.
-        </audio>
 
-        {this.renderButtons()}
-      </div>
-    );
-  }
-
-  renderButtons() {
-    return (
-      <ButtonToolbar>
-        <Button onClick={this.zoomIn}>Zoom in</Button>&nbsp;
-        <Button onClick={this.zoomOut}>Zoom out</Button>&nbsp;
-        <Button onClick={this.addSegment}>Add Segment</Button>&nbsp;
-        <Button onClick={this.addPoint}>Add Point</Button>&nbsp;
-        <Button onClick={this.logMarkers}>Log segments/points</Button>
-      </ButtonToolbar>
-    );
-  }
-
-  componentDidMount() {
-    console.log("WaveformComponent.componentDidMount");
-
-    this.initPeaks();
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    console.log('WaveformComponent.componentDidUpdate');
-
-    if (this.props.audioUrl === prevProps.audioUrl) {
+  useEffect(() => {
+    initPeaks();
+  },[]); //첫 렌더링이 완료될 때 실행, componentDidMount
+  
+  useEffect(() => {
+    console.log('props', props.audioUrl);
+    if (props.audioUrl === prevProps.audioUrl) {
       return;
     }
 
-    console.log('props', this.props);
+    console.log('props', props);
     console.log('prevProps', prevProps);
+    prevProps.audioUrl = props.audioUrl;
 
-    this.initPeaks();
-  }
+    initPeaks();
+  },[props]); // []안의 내용이 업데이트 될 때만 실행, componentDidUpdate
 
-  initPeaks() {
+  return (
+      <div>
+        <div className="zoomview-container" ref={zoomviewWaveformRef}></div>
+        <div className="overview-container" ref={overviewWaveformRef}></div>
+
+        <audio ref={audioRef} controls="controls">
+          <source src={props.audioUrl} type={props.audioContentType}/>
+          Your browser does not support the audio element.
+        </audio>
+
+        <ButtonToolbar>
+          <Button onClick={zoomIn}>Zoom in</Button>&nbsp;
+          <Button onClick={zoomOut}>Zoom out</Button>&nbsp;
+          <Button onClick={addSegment}>Add Segment</Button>&nbsp;
+          <Button onClick={addPoint}>Add Point</Button>&nbsp;
+          <Button onClick={logMarkers}>Log segments/points</Button>
+        </ButtonToolbar>
+
+      </div>
+    );
+
+  function initPeaks() {
     const options = {
       containers: {
-        overview: this.overviewWaveformRef.current,
-        zoomview: this.zoomviewWaveformRef.current
+        overview: overviewWaveformRef.current,
+        zoomview: zoomviewWaveformRef.current
       },
-      mediaElement: this.audioElementRef.current,
+      mediaElement: audioRef.current,
       keyboard: true,
       logger: console.error.bind(console),
       createSegmentMarker: createSegmentMarker,
@@ -84,57 +86,48 @@ class WaveformView extends Component {
       zoomLevels: [256, 512, 1024, 2048, 4096],
     };
 
-    if (this.props.waveformDataUrl) {
+    if (props.waveformDataUrl) {
       options.dataUri = {
-        arraybuffer: this.props.waveformDataUrl
+        arraybuffer: props.waveformDataUrl
       };
     }
-    else if (this.props.audioContext) {
+    else if (props.audioContext) {
       options.webAudio = {
-        audioContext: this.props.audioContext
+        audioContext: props.audioContext
       };
     }
 
-    this.audioElementRef.current.src = this.props.audioUrl;
+    audioRef.current.src = props.audioUrl;
 
-    if (this.peaks) {
-      this.peaks.destroy();
-      this.peaks = null;
+    if (peaks) {
+      peaks.destroy();
+      peaks = null;
     }
 
     Peaks.init(options, (err, peaks) => {
-      this.peaks = peaks;
-      this.onPeaksReady();
+      setPeaks(peaks);
+      onPeaksReady();
       const view = peaks.views.getView('zoomview')
       view.setWheelMode('scroll')
     });
   }
 
-  componentWillUnmount() {
-    console.log('WaveformView.componentWillUnmount');
-
-    if (this.peaks) {
-      this.peaks.destroy();
-    }
-  }
-
-  zoomIn = () => {
-    if (this.peaks) {
-      this.peaks.zoom.zoomIn();
+  function zoomIn() {
+    if (peaks) {
+      peaks.zoom.zoomIn();
     }
   };
 
-  zoomOut = () => {
-    if (this.peaks) {
-      this.peaks.zoom.zoomOut();
+  function zoomOut() {
+    if (peaks) {
+      peaks.zoom.zoomOut();
     }
   };
+  function addSegment() {
+    if (peaks) {
+      const time = peaks.player.getCurrentTime();
 
-  addSegment = () => {
-    if (this.peaks) {
-      const time = this.peaks.player.getCurrentTime();
-
-      this.peaks.segments.add({
+      peaks.segments.add({
         startTime: time,
         endTime: time + 10,
         labelText: 'Test Segment',
@@ -143,11 +136,11 @@ class WaveformView extends Component {
     }
   };
 
-  addPoint = () => {
-    if (this.peaks) {
-      const time = this.peaks.player.getCurrentTime();
+  function addPoint() {
+    if (peaks) {
+      const time = peaks.player.getCurrentTime();
 
-      this.peaks.points.add({
+      peaks.points.add({
         time: time,
         labelText: 'Test Point',
         editable: true
@@ -155,26 +148,26 @@ class WaveformView extends Component {
     }
   };
 
-  logMarkers = () => {
-    if (this.peaks) {
-      this.props.setSegments(this.peaks.segments.getSegments());
-      this.props.setPoints(this.peaks.points.getPoints());
+  function logMarkers() {
+    if (peaks) {
+      props.setSegments(peaks.segments.getSegments());
+      props.setPoints(peaks.points.getPoints());
     }
   }
 
-  onPeaksReady = () => {
+  function onPeaksReady() {
     // Do something when the Peaks instance is ready for use
     console.log("Peaks.js is ready");
   }
 }
 
-WaveformView.propTypes = {
-  audioUrl:         PropTypes.string,
-  audioContentType: PropTypes.string,
-  waveformDataUrl:  PropTypes.string,
-  audioContext:     PropTypes.object,
-  setSegments:      PropTypes.func,
-  setPoints:        PropTypes.func
-};
+// WaveformView.propTypes = {
+//   audioUrl:         PropTypes.string,
+//   audioContentType: PropTypes.string,
+//   waveformDataUrl:  PropTypes.string,
+//   audioContext:     PropTypes.object,
+//   setSegments:      PropTypes.func,
+//   setPoints:        PropTypes.func
+// };
 
 export default WaveformView;
