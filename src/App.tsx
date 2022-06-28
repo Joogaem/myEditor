@@ -1,5 +1,4 @@
 import React, { useState, useEffect, Dispatch, SetStateAction } from 'react';
-import "@babel/polyfill";
 import {
   Container,
   Table,
